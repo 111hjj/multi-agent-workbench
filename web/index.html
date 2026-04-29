@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多智能体协同知识工作台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'typing': 'typing 0.8s ease-in-out infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        typing: {
+                            '0%, 100%': { opacity: '0.4' },
+                            '50%': { opacity: '1' },
+                        },
+                    },
+                },
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-primary: #171717;
+            --text-secondary: #4b5563;
+            --text-tertiary: #6b7280;
+            --border-primary: #e5e7eb;
+            --theme-primary: #3b82f6;
+        }
+        
+        .dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-primary: #334155;
+            --theme-primary: #60a5fa;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .message-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .message-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .message-container::-webkit-scrollbar-thumb {
+            background: var(--text-tertiary);
+            border-radius: 3px;
+        }
+
+        .message-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .chat-bubble-user {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .chat-bubble-assistant {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+        }
+
+        .milestone-icon {
+            background: linear-gradient(135deg, var(--theme-primary), #60a5fa);
+        }
+
+        @keyframes thinking-dot {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+            30% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        .thinking-dot {
+            animation: thinking-dot 1.4s ease-in-out infinite;
+        }
+
+        .thinking-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .thinking-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .agent-card {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .agent-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .agent-card.active {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .markdown-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .markdown-content h1 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin: 1rem 0 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-content h2 {
+            font-size: 1.125rem;
+            font-weight: bold;
+            margin: 0.875rem 0 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-content h3 {
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 0.75rem 0 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-content p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+        }
+
+        .markdown-content ul,
+        .markdown-content ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .markdown-content li {
+            margin: 0.25rem 0;
+            line-height: 1.6;
+        }
+
+        .markdown-content code {
+            background-color: var(--bg-tertiary);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.875em;
+        }
+
+        .markdown-content pre {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .markdown-content pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .markdown-content blockquote {
+            border-left: 3px solid var(--theme-primary);
+            padding-left: 1rem;
+            margin: 0.75rem 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .markdown-content strong {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .markdown-content em {
+            font-style: italic;
+        }
+
+        .progress-bar {
+            transition: width 0.5s ease-out;
+        }
+
+        .agent-progress-item {
+            transition: all 0.3s ease;
+        }
+
+        .agent-progress-item.active {
+            background: rgba(59, 130, 246, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="h-screen flex flex-col max-w-4xl mx-auto">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl milestone-icon flex items-center justify-center">
+                    <i class="fas fa-brain text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-[var(--text-primary)]">多智能体协同工作台</h1>
+                    <p class="text-xs text-[var(--text-tertiary)]">Multi-Agent Knowledge Workspace</p>
+                </div>
+            </div>
+            <button id="theme-toggle" class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors">
+                <i class="fas fa-moon text-[var(--text-secondary)]"></i>
+            </button>
+        </header>
+
+        <div class="flex-1 flex">
+            <aside class="w-64 border-r border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4 overflow-y-auto hidden md:block">
+                <h3 class="text-sm font-semibold text-[var(--text-secondary)] mb-3">快速任务</h3>
+                <div class="space-y-2">
+                    <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-sm text-[var(--text-primary)]" onclick="loadExample('retrieve')">
+                        <i class="fas fa-search mr-2 text-primary-500"></i>
+                        文档检索
+                    </button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-sm text-[var(--text-primary)]" onclick="loadExample('crawl')">
+                        <i class="fas fa-globe mr-2 text-primary-500"></i>
+                        网页爬取
+                    </button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-sm text-[var(--text-primary)]" onclick="loadExample('analyze')">
+                        <i class="fas fa-chart-line mr-2 text-primary-500"></i>
+                        文本分析
+                    </button>
+                    <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-sm text-[var(--text-primary)]" onclick="loadExample('execute')">
+                        <i class="fas fa-code mr-2 text-primary-500"></i>
+                        代码生成
+                    </button>
+                </div>
+            </aside>
+
+            <main class="flex-1 flex flex-col">
+                <div id="message-container" class="flex-1 p-4 space-y-4 overflow-y-auto message-container">
+                    <div class="flex justify-center pt-8">
+                        <div class="text-center animate-fade-in">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl milestone-icon flex items-center justify-center">
+                                <i class="fas fa-brain text-white text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold text-[var(--text-primary)] mb-2">欢迎使用多智能体协同工作台</h2>
+                            <p class="text-[var(--text-secondary)] text-sm max-w-xs">
+                                输入您的问题，多智能体系统将协同完成任务
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="border-t border-[var(--border-primary)] bg-[var(--bg-secondary)] p-4">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="flex items-end gap-3">
+                            <div class="flex-1 relative">
+                                <textarea
+                                    id="query-input"
+                                    placeholder="输入您的问题或任务..."
+                                    rows="2"
+                                    class="w-full px-4 py-3 pr-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-primary)] resize-none focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] transition-all"
+                                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"
+                                ></textarea>
+                                <div class="absolute right-3 bottom-3 flex gap-1">
+                                    <button class="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] transition-colors" title="发送 (Enter)">
+                                        <i class="fas fa-paperclip"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                id="send-button"
+                                onclick="sendMessage()"
+                                class="px-6 py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-medium flex items-center gap-2 transition-all hover:shadow-lg hover:shadow-primary-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <i class="fas fa-paper-plane"></i>
+                                <span class="hidden sm:inline">发送</span>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-[var(--text-tertiary)]">
+                                    <i class="fas fa-shield-check text-green-500 mr-1"></i>
+                                    多智能体模式已启用
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-[var(--text-tertiary)]">Shift + Enter 换行</span>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let statusInterval = null;
+        let currentProgressMessageId = null;
+
+        function loadExample(type) {
+            const examples = {
+                retrieve: "请帮我检索关于机器学习的文档，重点关注深度学习和神经网络部分",
+                crawl: "请帮我爬取 https://example.com 网站的内容，并进行分析",
+                analyze: "分析以下文本的情感倾向：今天天气真好，我心情非常愉快！",
+                execute: "请编写一个 Python 函数，计算斐波那契数列的第 n 项"
+            };
+            document.getElementById('query-input').value = examples[type];
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('query-input');
+            const query = input.value.trim();
+            
+            if (!query) return;
+
+            input.value = '';
+            currentTaskId = null;
+
+            addMessage('user', query);
+
+            const progressId = addProgressMessage();
+            currentProgressMessageId = progressId;
+
+            const response = await fetch('http://localhost:8080/task?timestamp=' + Date.now(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await response.json();
+            currentTaskId = data.task_id;
+
+            pollStatus(progressId);
+        }
+
+        async function pollStatus(progressId) {
+            if (!currentTaskId) return;
+
+            const response = await fetch(`http://localhost:8080/status/${currentTaskId}`);
+            const data = await response.json();
+
+            updateProgressDisplay(progressId, data);
+
+            if (data.status === 'completed') {
+                clearInterval(statusInterval);
+                const result = await fetch(`http://localhost:8080/result/${currentTaskId}`);
+                const resultData = await result.json();
+                console.log('Received result:', resultData);
+                replaceProgressWithResult(progressId, resultData.result || '任务执行完成');
+            } else if (data.status === 'failed') {
+                clearInterval(statusInterval);
+                replaceProgressWithResult(progressId, `任务失败: ${data.error || '未知错误'}`);
+            }
+        }
+
+        function addProgressMessage() {
+            const container = document.getElementById('message-container');
+            const progressId = 'progress-' + Date.now();
+            
+            const progressDiv = document.createElement('div');
+            progressDiv.id = progressId;
+            progressDiv.className = 'flex justify-start animate-slide-up';
+            
+            progressDiv.innerHTML = `
+                <div class="flex items-end gap-3 max-w-[85%]">
+                    <div class="w-9 h-9 rounded-full milestone-icon flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-brain text-white text-sm"></i>
+                    </div>
+                    <div class="w-full">
+                        <div class="chat-bubble-assistant rounded-2xl px-4 py-3 shadow-lg">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-2 h-2 rounded-full bg-primary-500 thinking-dot"></div>
+                                <div class="w-2 h-2 rounded-full bg-primary-500 thinking-dot"></div>
+                                <div class="w-2 h-2 rounded-full bg-primary-500 thinking-dot"></div>
+                                <span class="text-sm text-[var(--text-secondary)]">智能体正在处理...</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="agent-progress-item p-2 rounded-lg" id="progress-planner">
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-search text-primary-500"></i>
+                                            <span>Planner</span>
+                                        </span>
+                                        <span class="text-[var(--text-tertiary)]">等待中</span>
+                                    </div>
+                                    <div class="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                        <div class="progress-bar h-full bg-primary-500 rounded-full w-0"></div>
+                                    </div>
+                                </div>
+                                <div class="agent-progress-item p-2 rounded-lg" id="progress-coordinator">
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-users text-primary-500"></i>
+                                            <span>Coordinator</span>
+                                        </span>
+                                        <span class="text-[var(--text-tertiary)]">等待中</span>
+                                    </div>
+                                    <div class="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                        <div class="progress-bar h-full bg-primary-500 rounded-full w-0"></div>
+                                    </div>
+                                </div>
+                                <div class="agent-progress-item p-2 rounded-lg" id="progress-specialists">
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-brain text-primary-500"></i>
+                                            <span>Specialists</span>
+                                        </span>
+                                        <span class="text-[var(--text-tertiary)]">等待中</span>
+                                    </div>
+                                    <div class="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                        <div class="progress-bar h-full bg-primary-500 rounded-full w-0"></div>
+                                    </div>
+                                </div>
+                                <div class="agent-progress-item p-2 rounded-lg" id="progress-summary">
+                                    <div class="flex items-center justify-between text-xs mb-1">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-file-alt text-primary-500"></i>
+                                            <span>Summary</span>
+                                        </span>
+                                        <span class="text-[var(--text-tertiary)]">等待中</span>
+                                    </div>
+                                    <div class="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                                        <div class="progress-bar h-full bg-primary-500 rounded-full w-0"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-[var(--text-tertiary)] mt-1 ml-1">
+                            ${new Date().toLocaleTimeString('zh-CN')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(progressDiv);
+            container.scrollTop = container.scrollHeight;
+
+            statusInterval = setInterval(() => pollStatus(progressId), 1500);
+            
+            return progressId;
+        }
+
+        function updateProgressDisplay(progressId, data) {
+            const agentStatuses = data.agent_statuses || [];
+            
+            const statusText = {
+                'pending': '等待中',
+                'running': '进行中',
+                'completed': '完成',
+                'error': '错误',
+                'skipped': '跳过'
+            };
+
+            const agentMap = {
+                'planner': 'planner',
+                'coordinator': 'coordinator',
+                'specialists': 'specialists',
+                'summary': 'summary'
+            };
+
+            agentStatuses.forEach(agent => {
+                const mappedType = agentMap[agent.agent_type];
+                if (!mappedType) return;
+
+                const item = document.querySelector(`#progress-${mappedType}`);
+                if (!item) return;
+
+                const progressBar = item.querySelector('.progress-bar');
+                const statusSpan = item.querySelector('span:last-child');
+
+                if (progressBar) {
+                    progressBar.style.width = `${agent.progress || 0}%`;
+                    if (agent.status === 'completed') {
+                        progressBar.classList.add('bg-green-500');
+                        progressBar.classList.remove('bg-primary-500');
+                        item.classList.add('active');
+                    } else if (agent.status === 'error') {
+                        progressBar.classList.add('bg-red-500');
+                        progressBar.classList.remove('bg-primary-500');
+                    } else if (agent.status === 'running') {
+                        item.classList.add('active');
+                    } else {
+                        progressBar.classList.add('bg-primary-500');
+                        progressBar.classList.remove('bg-green-500', 'bg-red-500');
+                        item.classList.remove('active');
+                    }
+                }
+
+                if (statusSpan) {
+                    const displayText = agent.status === 'running' ? agent.current_step : statusText[agent.status];
+                    statusSpan.textContent = displayText || '等待中';
+                }
+            });
+        }
+
+        function replaceProgressWithResult(progressId, content) {
+            const progressDiv = document.getElementById(progressId);
+            if (!progressDiv) return;
+
+            const container = document.getElementById('message-container');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-start animate-slide-up';
+            
+            const renderedContent = marked.parse(content);
+            
+            messageDiv.innerHTML = `
+                <div class="flex items-end gap-3 max-w-[85%]">
+                    <div class="w-9 h-9 rounded-full milestone-icon flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-brain text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="chat-bubble-assistant rounded-2xl px-4 py-3 shadow-lg">
+                            <div class="markdown-content text-sm leading-relaxed">${renderedContent}</div>
+                        </div>
+                        <div class="text-[10px] text-[var(--text-tertiary)] mt-1 ml-1">
+                            ${new Date().toLocaleTimeString('zh-CN')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.replaceChild(messageDiv, progressDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addMessage(role, content) {
+            const container = document.getElementById('message-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`;
+            
+            const renderedContent = role === 'assistant' ? marked.parse(content) : content;
+            
+            messageDiv.innerHTML = `
+                <div class="flex items-end gap-3 max-w-[85%]">
+                    ${role === 'assistant' ? `
+                        <div class="w-9 h-9 rounded-full milestone-icon flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-brain text-white text-sm"></i>
+                        </div>
+                    ` : ''}
+                    <div>
+                        <div class="chat-bubble-${role} rounded-2xl px-4 py-3 shadow-lg">
+                            ${role === 'user' ? `<p class="text-sm leading-relaxed">${content}</p>` : ''}
+                            ${role === 'assistant' ? `
+                                <div class="markdown-content text-sm leading-relaxed">${renderedContent}</div>
+                            ` : ''}
+                        </div>
+                        <div class="text-[10px] text-[var(--text-tertiary)] mt-1 ml-1">
+                            ${new Date().toLocaleTimeString('zh-CN')}
+                        </div>
+                    </div>
+                    ${role === 'user' ? `
+                        <div class="w-9 h-9 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const icon = document.querySelector('#theme-toggle i');
+            if (document.body.classList.contains('dark')) {
+                icon.className = 'fas fa-sun text-[var(--text-secondary)]';
+            } else {
+                icon.className = 'fas fa-moon text-[var(--text-secondary)]';
+            }
+        });
+
+        document.querySelectorAll('button[onclick^="loadExample"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('button[onclick^="loadExample"]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
