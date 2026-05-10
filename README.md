@@ -7,7 +7,7 @@
 
 一个能理解自然语言任务、自动拆解并调度多个智能体协作的系统，支持从本地文档和实时网页中检索知识。
 
-## ✨ 核心特性
+## 一、 核心特性
 
 ### 多智能体架构
 - **Planner**: LLM 自动拆解任务为子任务列表
@@ -36,7 +36,7 @@
 - `GET /status/{task_id}`: 查询状态
 - `GET /result/{task_id}`: 获取结果
 
-## 🛠️ 技术栈
+## 二、 技术栈
 
 ### 后端
 - **框架**: FastAPI
@@ -51,7 +51,7 @@
 - **纯 HTML/CSS/JavaScript**
 - **响应式设计**
 
-## 📁 项目结构
+## 三、 项目结构
 
 ```
 multi-agent-workspace/
@@ -75,7 +75,7 @@ multi-agent-workspace/
 └── uploads/               # 上传文件
 ```
 
-## 🚀 快速开始
+## 四、 快速开始
 
 ### 环境要求
 - Python 3.10+
@@ -128,7 +128,7 @@ python main.py
 - API 文档: http://localhost:8000/docs
 - Web 界面: 打开 `web/index.html`
 
-## 📚 API 使用示例
+## 五、 API 使用示例
 
 ### 提交任务
 
@@ -175,7 +175,7 @@ curl http://localhost:8000/result/550e8400-e29b-41d4-a716-446655440000
 }
 ```
 
-## 🧪 离线评估
+## 六、 离线评估
 
 运行评估脚本：
 
@@ -188,7 +188,7 @@ python scripts/evaluate.py
 - **Recall@10**: 前10个结果中的召回率
 - **MRR**: 平均倒数排名
 
-## 📝 简历项目描述
+## 七、 简历项目描述
 
 **多智能体协同知识工作台（2026.04）**
 
@@ -200,14 +200,14 @@ python scripts/evaluate.py
 - **后端服务**：基于 FastAPI 提供极简任务接口（/task, /status, /result），便于演示，不强调后端细节。
 - **离线评估**：编写评测脚本量化不同检索策略效果，对比向量/混合/重排的召回率。
 
-## 🤝 贡献指南
+##  贡献指南
 
 欢迎提交 Issue 和 Pull Request！
 
-## 📄 许可证
+##  许可证
 
 本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
-=======
+
 # multi-agent-workbench
 多智能体协作工作台—自然语言驱动，自动拆解任务，调度爬虫/检索/分析专家，实现复杂信息采集与报告生成
 >>>>>>> 5c17afc0dbbb0c470bff82ee7f9d4116eba63cbf
