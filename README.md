@@ -208,6 +208,4 @@ python scripts/evaluate.py
 
 本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
-# multi-agent-workbench
-多智能体协作工作台—自然语言驱动，自动拆解任务，调度爬虫/检索/分析专家，实现复杂信息采集与报告生成
->>>>>>> 5c17afc0dbbb0c470bff82ee7f9d4116eba63cbf
+
